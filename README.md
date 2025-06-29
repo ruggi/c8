@@ -15,10 +15,14 @@ go build .
 
 ### SDL
 
+![SDL backend](/_assets/sdl.png)
+
 By default the emulator uses SDL as the input/output backend.
 You'll need to have the SDL library installed on your machine in order to compile/run C8.
 
 ### Terminal
+
+![Terminal backend](/_assets/terminal.png)
 
 Alternatively you can use the terminal backend:
 
