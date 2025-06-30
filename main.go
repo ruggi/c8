@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/ruggi/c8/internal/backend"
 	"github.com/ruggi/c8/internal/emulator"
@@ -12,8 +11,10 @@ import (
 )
 
 var config struct {
-	romFile string
-	backend string
+	romFile    string
+	backend    string
+	cpuRate    int
+	renderRate int
 }
 
 func main() {
@@ -32,6 +33,18 @@ func main() {
 			Usage:       "The backend to use (sdl, terminal)",
 			Destination: &config.backend,
 			Value:       string(backend.SDL),
+		},
+		&cli.IntFlag{
+			Name:        "c,cpu-rate",
+			Usage:       "The CPU rate in Hz",
+			Destination: &config.cpuRate,
+			Value:       600,
+		},
+		&cli.IntFlag{
+			Name:        "r,render-rate",
+			Usage:       "The render rate in Hz",
+			Destination: &config.renderRate,
+			Value:       60,
 		},
 	}
 	app.Action = run
@@ -55,41 +68,7 @@ func run(ctx *cli.Context) error {
 	defer b.Close()
 
 	e := emulator.New(b)
-	e.LoadROM(rom)
+	e.Load(rom)
 
-	cpuHz := 600 // hz
-	cpuInterval := time.Duration(1_000_000_000/cpuHz) * time.Nanosecond
-
-	displayHz := 60 // hz
-	displayInterval := time.Duration(1_000_000_000/displayHz) * time.Nanosecond
-
-	previousTick := time.Now()
-	previousRender := time.Now()
-
-	for {
-		now := time.Now()
-
-		b.Update()
-
-		if now.Sub(previousTick) >= cpuInterval {
-			e.Tick()
-			previousTick = now
-		}
-
-		if now.Sub(previousRender) >= displayInterval {
-			err := b.Render(e.FB())
-			if err != nil {
-				return fmt.Errorf("render (%s): %w", b.Name(), err)
-			}
-			previousRender = now
-		}
-
-		// Check if sound should be playing
-		if e.ShouldBuzz() {
-			err := b.Buzz()
-			if err != nil {
-				return fmt.Errorf("sound error: %w", err)
-			}
-		}
-	}
+	return e.Run(b, config.cpuRate, config.renderRate)
 }

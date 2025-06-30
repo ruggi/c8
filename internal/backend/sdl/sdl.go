@@ -6,7 +6,6 @@ import (
 	"os"
 	"sync"
 	"time"
-	"unsafe"
 
 	"github.com/ruggi/c8/internal/display"
 	"github.com/ruggi/c8/internal/input"
@@ -87,37 +86,24 @@ func New(title string) (*sdlBackend, error) {
 }
 
 func (b *sdlBackend) Render(fb display.Framebuffer) error {
-	for y := range display.Height {
-		for x := range display.Width {
-			idx := (y*display.Width + x) * 4
-			if fb[x][y] {
-				// White pixel
-				b.pixels[idx] = 0xFF
-				b.pixels[idx+1] = 0xFF
-				b.pixels[idx+2] = 0xFF
-				b.pixels[idx+3] = 0xFF
-			} else {
-				// Black pixel
-				b.pixels[idx] = 0
-				b.pixels[idx+1] = 0
-				b.pixels[idx+2] = 0
-				b.pixels[idx+3] = 0
-			}
-		}
-	}
-
-	// Update texture with the new pixel data
-	b.texture.Update(nil, unsafe.Pointer(&b.pixels[0]), display.Width*4)
-
-	b.renderer.SetDrawColor(0, 0, 0, 255)
+	b.renderer.SetDrawColor(0, 0, 0, 0xFF)
 	b.renderer.Clear()
 
-	b.renderer.Copy(b.texture, nil, &sdl.Rect{
-		X: 0,
-		Y: 0,
-		W: display.Width * scale,
-		H: display.Height * scale,
-	})
+	b.renderer.SetDrawColor(0xFF, 0xFF, 0xFF, 0xFF)
+	for x := range fb {
+		for y := range fb[x] {
+			if !fb[x][y] {
+				continue
+			}
+			rect := sdl.Rect{
+				X: int32(x * scale),
+				Y: int32(y * scale),
+				W: scale,
+				H: scale,
+			}
+			b.renderer.FillRect(&rect)
+		}
+	}
 
 	b.renderer.Present()
 

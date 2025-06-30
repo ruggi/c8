@@ -11,6 +11,8 @@ go build .
 ./c8 -r <your-rom-file>
 ```
 
+Help for the program is available using the `--h (--help)` flag.
+
 ## Backend
 
 ### SDL
@@ -31,3 +33,14 @@ Alternatively you can use the terminal backend:
 ```
 
 Since there are no key release events in terminals, they are simulated with a 250ms timeout.
+
+## Performance
+
+By default the CPU will simulate running at 600Hz, while the rendering will happen at 60Hz.
+
+You can customize both values when launching the program with the `-c` and `-r` flags:
+
+```text
+   -c value, --cpu-rate value     The CPU rate in Hz (default: 600)
+   -r value, --render-rate value  The render rate in Hz (default: 60)
+```

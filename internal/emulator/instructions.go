@@ -138,9 +138,6 @@ func (o op0NNN) run(c *Emulator) {
 type op00E0 struct{}
 
 func (op00E0) run(c *Emulator) {
-	c.fbMu.Lock()
-	defer c.fbMu.Unlock()
-
 	for i := range c.fb {
 		for j := range c.fb[i] {
 			c.fb[i][j] = false
@@ -361,9 +358,6 @@ type opDXYN struct {
 }
 
 func (o opDXYN) run(c *Emulator) {
-	c.fbMu.Lock()
-	defer c.fbMu.Unlock()
-
 	c.flag(false)
 
 	for i := uint8(0); i < o.in.n; i++ {
@@ -380,7 +374,7 @@ func (o opDXYN) run(c *Emulator) {
 			fbValue := c.fb[col][row]
 			c.fb[col][row] = !fbValue
 
-			if fbValue {
+			if fbValue { // it means it flipped
 				c.flag(true)
 			}
 		}

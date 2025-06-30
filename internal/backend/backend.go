@@ -32,7 +32,7 @@ func New(t Type, title string) (Backend, error) {
 	case SDL:
 		return sdl.New(title)
 	case Terminal:
-		return terminal.New()
+		return terminal.New(title)
 	default:
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}

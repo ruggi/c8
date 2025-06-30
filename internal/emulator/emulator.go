@@ -1,8 +1,9 @@
 package emulator
 
 import (
-	"sync"
+	"time"
 
+	"github.com/ruggi/c8/internal/backend"
 	"github.com/ruggi/c8/internal/display"
 	"github.com/ruggi/c8/internal/input"
 )
@@ -25,7 +26,6 @@ type Emulator struct {
 
 	input input.Manager
 	fb    display.Framebuffer
-	fbMu  sync.RWMutex
 
 	waitingForKey bool
 	keyWaitTarget uint8
@@ -59,36 +59,61 @@ func New(input input.Manager) *Emulator {
 	return c
 }
 
-func (c *Emulator) FB() display.Framebuffer {
-	c.fbMu.RLock()
-	defer c.fbMu.RUnlock()
-
-	return c.fb
-}
-
-func (c *Emulator) LoadROM(data []byte) {
-	for i := range data {
-		c.memory[romStart+i] = data[i]
+func (c *Emulator) Load(rom []byte) {
+	for i := range rom {
+		c.memory[romStart+i] = rom[i]
 	}
 }
 
-func (c *Emulator) Tick() {
+func (c *Emulator) Run(b backend.Backend, cpuRate, renderRate int) error {
+	cpuInterval := time.Second / time.Duration(cpuRate)
+	renderInterval := time.Second / time.Duration(renderRate)
+
+	cpuTime := time.Now()
+	renderTime := time.Now()
+
+	for {
+		now := time.Now()
+
+		// cpu
+		for now.Sub(cpuTime) >= cpuInterval {
+			b.Update()
+			c.tick()
+			cpuTime = cpuTime.Add(cpuInterval)
+		}
+
+		// render and timers
+		if now.Sub(renderTime) >= renderInterval {
+			c.updateTimers()
+			b.Render(c.fb)
+			if c.soundTimer > 0 {
+				b.Buzz()
+			}
+			renderTime = renderTime.Add(renderInterval)
+		}
+
+		time.Sleep(100 * time.Microsecond)
+	}
+}
+
+func (c *Emulator) tick() {
 	op1 := c.memory[c.pc]
 	op2 := c.memory[c.pc+1]
 	c.pcUP()
 
 	opcode := uint16(op1)<<8 | uint16(op2)
 
+	ins := parseInstruction(opcode)
+	ins.run(c)
+}
+
+func (c *Emulator) updateTimers() {
 	if c.delayTimer > 0 {
 		c.delayTimer--
 	}
 	if c.soundTimer > 0 {
 		c.soundTimer--
 	}
-
-	ins := parseInstruction(opcode)
-	ins.run(c)
-
 }
 
 func (c *Emulator) pcUP() {
@@ -97,11 +122,6 @@ func (c *Emulator) pcUP() {
 
 func (c *Emulator) pcDown() {
 	c.pc -= 2
-}
-
-// ShouldBuzz returns true if the sound timer is active (greater than 0)
-func (c *Emulator) ShouldBuzz() bool {
-	return c.soundTimer > 0
 }
 
 func (c *Emulator) flag(value bool) {

@@ -22,7 +22,7 @@ type terminal struct {
 	keyCh  chan *tcell.EventKey
 }
 
-func New() (*terminal, error) {
+func New(title string) (*terminal, error) {
 	s, err := tcell.NewScreen()
 	if err != nil {
 		return nil, fmt.Errorf("new screen: %w", err)
@@ -55,6 +55,8 @@ func New() (*terminal, error) {
 		}
 	}()
 
+	s.SetTitle(title)
+
 	return &terminal{
 		s:      s,
 		stopCh: stopCh,
@@ -83,18 +85,20 @@ func (t *terminal) Render(fb display.Framebuffer) error {
 	t.s.SetCell(0, 0, tcell.StyleDefault, '┌')
 	// tr
 	t.s.SetCell(display.Width+1, 0, tcell.StyleDefault, '┐')
-	// top
 	for x := 1; x <= display.Width; x++ {
+		// top
 		t.s.SetCell(x, 0, tcell.StyleDefault, '─')
+		// bottom
 		t.s.SetCell(x, display.Height+1, tcell.StyleDefault, '─')
 	}
 	// bl
 	t.s.SetCell(0, display.Height+1, tcell.StyleDefault, '└')
 	// br
 	t.s.SetCell(display.Width+1, display.Height+1, tcell.StyleDefault, '┘')
-	// left
 	for y := 1; y <= display.Height; y++ {
+		// left
 		t.s.SetCell(0, y, tcell.StyleDefault, '│')
+		// right
 		t.s.SetCell(display.Width+1, y, tcell.StyleDefault, '│')
 	}
 
@@ -105,6 +109,9 @@ func (t *terminal) Render(fb display.Framebuffer) error {
 			}
 		}
 	}
+
+	// print a message at the bottom of the screen
+	t.s.SetCell(0, display.Height+2, tcell.StyleDefault, []rune("(ESC) to exit")...)
 
 	t.s.Show()
 	return nil
